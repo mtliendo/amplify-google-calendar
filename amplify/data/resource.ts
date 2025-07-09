@@ -1,5 +1,8 @@
 import { type ClientSchema, a, defineData } from '@aws-amplify/backend'
 import { postConfirmation } from '../functions/postConfirmation/resource'
+import { generateGoogleOauthAuthorizationUrl } from '../functions/google/generate-authorization-url/resource'
+import { disconnectFromGoogleOauth } from '../functions/google/disconnect/resource'
+import { googleOauthCallback } from '../functions/google/callback/resource'
 
 const schema = a
 	.schema({
@@ -28,7 +31,7 @@ const schema = a
 		SupportedProviders: a.enum(['google']), //* Which providers are supported
 		generateOauthAuthorizationUrl: a
 			.mutation()
-			.handler(a.handler.function(generateOauthAuthorizationUrl))
+			.handler(a.handler.function(generateGoogleOauthAuthorizationUrl))
 			.arguments({
 				userId: a.string().required(),
 				provider: a.ref('SupportedProviders'),
@@ -43,32 +46,31 @@ const schema = a
 			})
 			.authorization((allow) => [allow.group('NONE')]) // called on the backend.
 			.secondaryIndexes((index) => [index('userId')]),
-		disconnectFromOauth: a
+		disconnectFromGoogleOauth: a
 			.mutation()
-			.handler(a.handler.function(disconnectFromOauth))
+			.handler(a.handler.function(disconnectFromGoogleOauth))
 			.arguments({
 				userId: a.string().required(),
-				provider: a.ref('SupportedProviders').required(),
 			})
 			.returns(a.customType({ success: a.boolean(), message: a.string() }))
 			.authorization((allow) => [allow.authenticated()]),
 
 		//! Provider specific functions //
-		fetchCalendarEvents: a
-			.query()
-			.handler(a.handler.function(fetchCalendarEvents))
-			.arguments({
-				userId: a.string().required(),
-				provider: a.ref('SupportedProviders'),
-			})
-			.returns(a.customType({ events: a.string() })),
+		// fetchCalendarEvents: a
+		// 	.query()
+		// 	.handler(a.handler.function(fetchCalendarEvents))
+		// 	.arguments({
+		// 		userId: a.string().required(),
+		// 		provider: a.ref('SupportedProviders'),
+		// 	})
+		// 	.returns(a.customType({ events: a.string() })),
 	})
 	.authorization((allow) => [
 		allow.resource(postConfirmation).to(['mutate']), // adds user to db
-		allow.resource(generateOauthAuthorizationUrl).to(['mutate']), // creates oauth state in db
-		allow.resource(oauthCallback).to(['mutate', 'query']), // lambda furl. lists tokens from db. updates tokens in db if expired
-		allow.resource(disconnectFromOauth).to(['mutate', 'query']), // removes tokens from db
-		allow.resource(fetchCalendarEvents).to(['mutate', 'query']), // fetch user from db. updates tokens in db if expired
+		allow.resource(generateGoogleOauthAuthorizationUrl).to(['mutate']), // creates oauth state in db
+		allow.resource(googleOauthCallback).to(['mutate', 'query']), // lambda furl. lists tokens from db. updates tokens in db if expired
+		allow.resource(disconnectFromGoogleOauth).to(['mutate', 'query']), // removes tokens from db
+		// allow.resource(fetchCalendarEvents).to(['mutate', 'query']), // fetch user from db. updates tokens in db if expired
 	])
 
 export type Schema = ClientSchema<typeof schema>
