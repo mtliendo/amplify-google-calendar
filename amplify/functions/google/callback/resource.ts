@@ -6,7 +6,7 @@ export const googleOauthCallback = defineFunction({
 	entry: './main.ts',
 	runtime: 22,
 	environment: {
-		ACCESS_TOKEN_ENDPOINT: 'https://oauth2.googleapis.com/token',
+		GOOGLE_ACCESS_TOKEN_ENDPOINT: 'https://oauth2.googleapis.com/token',
 		GOOGLE_CLIENT_ID: process.env.GOOGLE_CLIENT_ID!,
 		GOOGLE_CLIENT_SECRET:
 			process.env.GOOGLE_CLIENT_SECRET || secret('GOOGLE_CLIENT_SECRET'),

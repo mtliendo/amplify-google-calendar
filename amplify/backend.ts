@@ -6,6 +6,7 @@ import { googleOauthCallback } from './functions/google/callback/resource'
 import { generateGoogleOauthAuthorizationUrl } from './functions/google/generate-authorization-url/resource'
 import { disconnectFromGoogleOauth } from './functions/google/disconnect/resource'
 import { FunctionUrlAuthType } from 'aws-cdk-lib/aws-lambda'
+import { listGoogleCalendarEvents } from './functions/google/listGoogleCalendarEvents/resource'
 
 const backend = defineBackend({
 	auth,
@@ -14,6 +15,7 @@ const backend = defineBackend({
 	googleOauthCallback,
 	generateGoogleOauthAuthorizationUrl,
 	disconnectFromGoogleOauth,
+	listGoogleCalendarEvents,
 })
 
 const cfnOauthStateTable =

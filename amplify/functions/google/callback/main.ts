@@ -90,7 +90,7 @@ export const handler: LambdaFunctionURLHandler = async (
 	params.append('client_secret', env.GOOGLE_CLIENT_SECRET)
 
 	// 7. Exchange the authorization code for an access token
-	const res = await fetch(env.ACCESS_TOKEN_ENDPOINT, {
+	const res = await fetch(env.GOOGLE_ACCESS_TOKEN_ENDPOINT, {
 		method: 'POST',
 		headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
 		body: params,

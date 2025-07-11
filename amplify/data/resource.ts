@@ -3,6 +3,7 @@ import { postConfirmation } from '../functions/postConfirmation/resource'
 import { generateGoogleOauthAuthorizationUrl } from '../functions/google/generate-authorization-url/resource'
 import { disconnectFromGoogleOauth } from '../functions/google/disconnect/resource'
 import { googleOauthCallback } from '../functions/google/callback/resource'
+import { listGoogleCalendarEvents } from '../functions/google/listGoogleCalendarEvents/resource'
 
 const schema = a
 	.schema({
@@ -56,21 +57,21 @@ const schema = a
 			.authorization((allow) => [allow.authenticated()]),
 
 		//! Provider specific functions //
-		// fetchCalendarEvents: a
-		// 	.query()
-		// 	.handler(a.handler.function(fetchCalendarEvents))
-		// 	.arguments({
-		// 		userId: a.string().required(),
-		// 		provider: a.ref('SupportedProviders'),
-		// 	})
-		// 	.returns(a.customType({ events: a.string() })),
+		listGoogleCalendarEvents: a
+			.query()
+			.handler(a.handler.function(listGoogleCalendarEvents))
+			.arguments({
+				userIdInDb: a.string().required(),
+			})
+			.returns(a.customType({ events: a.string(), error: a.string() }))
+			.authorization((allow) => [allow.authenticated()]),
 	})
 	.authorization((allow) => [
 		allow.resource(postConfirmation).to(['mutate']), // adds user to db
 		allow.resource(generateGoogleOauthAuthorizationUrl).to(['mutate']), // creates oauth state in db
 		allow.resource(googleOauthCallback).to(['mutate', 'query']), // lambda furl. lists tokens from db. updates tokens in db if expired
 		allow.resource(disconnectFromGoogleOauth).to(['mutate', 'query']), // removes tokens from db
-		// allow.resource(fetchCalendarEvents).to(['mutate', 'query']), // fetch user from db. updates tokens in db if expired
+		allow.resource(listGoogleCalendarEvents).to(['query', 'mutate']), // fetch user from db. updates tokens in db if expired
 	])
 
 export type Schema = ClientSchema<typeof schema>
@@ -82,3 +83,9 @@ export const data = defineData({
 		defaultAuthorizationMode: 'userPool',
 	},
 })
+
+// todo: authorize from frontend
+// todo: deauthorize from frontend
+// todo: authorize from frontend
+// todo: list calendar events from frontend
+// todo: let an hour go by, list calendar events again and see if the token is refreshed
