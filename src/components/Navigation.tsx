@@ -3,7 +3,10 @@ import { Link } from 'react-router'
 import { useAuthenticator } from '@aws-amplify/ui-react'
 
 const Navigation = () => {
-	const { signOut } = useAuthenticator((context) => [context.signOut])
+	const { signOut, user } = useAuthenticator((context) => [
+		context.signOut,
+		context.user,
+	])
 	return (
 		<nav className="bg-white shadow-sm border-b border-gray-200 mb-8">
 			<div className="max-w-4xl mx-auto px-4">
@@ -29,12 +32,18 @@ const Navigation = () => {
 								Settings
 							</Link>
 							<div className="flex justify-end p-4">
-								<button
-									className="bg-red-500 text-white p-2 rounded-md"
-									onClick={signOut}
-								>
-									Sign out
-								</button>
+								{user ? (
+									<button
+										className="bg-red-500 text-white p-2 rounded-md"
+										onClick={signOut}
+									>
+										Sign out
+									</button>
+								) : (
+									<button className="bg-red-500 text-white p-2 rounded-md">
+										Sign in
+									</button>
+								)}
 							</div>
 						</div>
 					</div>

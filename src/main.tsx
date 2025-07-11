@@ -7,8 +7,8 @@ import awsConfig from '../amplify_outputs.json'
 import '@aws-amplify/ui-react/styles.css'
 import { Authenticator } from '@aws-amplify/ui-react'
 import { BrowserRouter, Route, Routes } from 'react-router'
-import MeetingsPage from './components/MeetingsPage.tsx'
-import SettingsPage from './components/SettingsPage.tsx'
+import MeetingsPage from './pages/MeetingsPage.tsx'
+import SettingsPage from './pages/SettingsPage.tsx'
 import Navigation from './components/Navigation.tsx'
 
 Amplify.configure(awsConfig)

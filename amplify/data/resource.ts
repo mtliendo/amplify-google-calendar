@@ -29,6 +29,13 @@ const schema = a
 			scope: a.string(),
 			expiresAt: a.integer(),
 		}),
+		GoogleEvent: a.customType({
+			id: a.string(),
+			summary: a.string(),
+			description: a.string(),
+			startTime: a.string(),
+			endTime: a.string(),
+		}),
 		SupportedProviders: a.enum(['google']), //* Which providers are supported
 		generateOauthAuthorizationUrl: a
 			.mutation()
@@ -62,8 +69,15 @@ const schema = a
 			.handler(a.handler.function(listGoogleCalendarEvents))
 			.arguments({
 				userIdInDb: a.string().required(),
+				timeMin: a.string().required(),
+				timeMax: a.string().required(),
 			})
-			.returns(a.customType({ events: a.string(), error: a.string() }))
+			.returns(
+				a.customType({
+					events: a.ref('GoogleEvent').array(),
+					error: a.string(),
+				})
+			)
 			.authorization((allow) => [allow.authenticated()]),
 	})
 	.authorization((allow) => [
