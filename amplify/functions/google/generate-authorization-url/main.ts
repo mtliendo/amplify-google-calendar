@@ -3,7 +3,7 @@ import { Amplify } from 'aws-amplify'
 import { generateClient } from 'aws-amplify/data'
 import { getAmplifyDataClientConfig } from '@aws-amplify/backend/function/runtime'
 import { env } from '$amplify/env/generate-google-oauth-authorization-url'
-import { generateOauthState } from '../../oauthUtils'
+import { generateOauthState, buildAuthorizationUrl } from '../../oauthUtils'
 
 const { resourceConfig, libraryOptions } = await getAmplifyDataClientConfig(env)
 
@@ -11,37 +11,25 @@ Amplify.configure(resourceConfig, libraryOptions)
 
 const client = generateClient<Schema>()
 
-/**
- * This function is used to generate a random state and ttl for the oauth state and save it to the database
- * It is used to generate the url to the provider oauth page
- * It is modular and can be used for any provider
- * Each item in the database will only live for 5 minutes as determined by the ttl
- */
 export const handler: Schema['generateGoogleOauthAuthorizationUrl']['functionHandler'] =
 	async (event) => {
-		//1. generate a random state and ttl for dynamoDB
 		const { state, ttl } = generateOauthState(event.arguments.userId, 'google')
 
-		//2. save the state and ttl to the database as a new OAuthState item for the user
 		await client.models.OAuthState.create({
 			userId: event.arguments.userId,
 			state,
 			ttl,
 		})
 
-		//3. create the url to the provider oauth page based on provider
+		const authorizationUrl = buildAuthorizationUrl(env.AUTHORIZATION_URL, {
+			client_id: env.GOOGLE_CLIENT_ID,
+			scope: env.SCOPES,
+			redirect_uri: env.REDIRECT_URI,
+			state,
+			response_type: 'code',
+			access_type: 'offline',
+			prompt: 'consent',
+		})
 
-		const url = new URL(env.AUTHORIZATION_URL)
-		url.searchParams.set('client_id', env.GOOGLE_CLIENT_ID)
-		url.searchParams.set('scope', env.SCOPES)
-		url.searchParams.set('redirect_uri', env.REDIRECT_URI)
-		url.searchParams.set('state', state)
-		url.searchParams.set('response_type', 'code')
-		url.searchParams.set('access_type', 'offline')
-		url.searchParams.set('prompt', 'consent')
-
-		//4. return the url to the client to redirect to the provider oauth page
-		return {
-			authorizationUrl: url.toString(),
-		}
+		return { authorizationUrl }
 	}
