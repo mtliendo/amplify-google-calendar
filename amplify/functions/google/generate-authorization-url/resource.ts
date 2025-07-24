@@ -7,7 +7,7 @@ export const generateGoogleOauthAuthorizationUrl = defineFunction({
 	runtime: 22,
 	environment: {
 		GOOGLE_CLIENT_ID: process.env.GOOGLE_CLIENT_ID!,
-		REDIRECT_URI: process.env.REDIRECT_URI!,
+		REDIRECT_URI: process.env.GOOGLE_REDIRECT_URI!,
 		AUTHORIZATION_URL: 'https://accounts.google.com/o/oauth2/v2/auth',
 		SCOPES: ['https://www.googleapis.com/auth/calendar'].join(','),
 	},

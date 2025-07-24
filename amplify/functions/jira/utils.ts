@@ -1,0 +1,85 @@
+import { Schema } from '../../data/resource'
+import { Amplify } from 'aws-amplify'
+import { generateClient } from 'aws-amplify/data'
+import { getAmplifyDataClientConfig } from '@aws-amplify/backend/function/runtime'
+import { env } from '$amplify/env/list-jira-tickets'
+const { resourceConfig, libraryOptions } = await getAmplifyDataClientConfig(env)
+
+Amplify.configure(resourceConfig, libraryOptions)
+
+const client = generateClient<Schema>()
+
+export const getValidJiraAccessToken = async (userId: string) => {
+	const user = await client.models.User.get({ id: userId })
+	const jiraOneHourTTLInSeconds = 3600
+	const nowInSeconds = Math.floor(Date.now() / 1000)
+
+	if (!user.data?.providers?.jira?.oauth?.accessToken) {
+		return {
+			error: 'No access token found',
+		}
+	}
+
+	const jiraOauthDataFromUser = user.data?.providers?.jira?.oauth
+
+	if (
+		jiraOauthDataFromUser?.expiresAt &&
+		jiraOauthDataFromUser?.expiresAt > nowInSeconds
+	) {
+		// Token is still valid
+		return {
+			accessToken: user.data?.providers?.jira?.oauth?.accessToken,
+			error: null,
+		}
+	}
+
+	// Token expired or about to expire → refresh it
+	const params = new URLSearchParams()
+	params.append('grant_type', 'refresh_token')
+	params.append('refresh_token', jiraOauthDataFromUser.refreshToken!)
+	params.append('client_id', env.JIRA_CLIENT_ID)
+	params.append('client_secret', env.JIRA_CLIENT_SECRET)
+
+	const res = await fetch(env.JIRA_ACCESS_TOKEN_ENDPOINT, {
+		method: 'POST',
+		headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+		body: params,
+	})
+
+	const data = await res.json()
+
+	if (!res.ok) {
+		console.error('Token refresh failed:', res.status, data)
+		return {
+			error: `Token refresh failed: ${data.error || res.statusText}`,
+		}
+	}
+
+	if (!data.access_token) {
+		return {
+			error: 'Failed to refresh token - no access token in response',
+		}
+	}
+
+	const newAccessToken = data.access_token
+	const newRefreshToken = data.refresh_token || jiraOauthDataFromUser.refreshToken // Keep existing if not provided
+	const newScope = data.scope || jiraOauthDataFromUser.scope
+	const newExpiresAt = nowInSeconds + jiraOneHourTTLInSeconds
+
+	// Update user tokens - fix the nesting issue
+	await client.models.User.update({
+		id: userId,
+		providers: {
+			jira: {
+				oauth: {
+					accessToken: newAccessToken,
+					refreshToken: newRefreshToken,
+					scope: newScope,
+					expiresAt: newExpiresAt,
+				},
+			},
+		},
+	})
+
+	return { accessToken: newAccessToken }
+}

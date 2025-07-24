@@ -2,7 +2,7 @@ import { Schema } from '../../../data/resource'
 import { Amplify } from 'aws-amplify'
 import { generateClient } from 'aws-amplify/data'
 import { getAmplifyDataClientConfig } from '@aws-amplify/backend/function/runtime'
-import { env } from '$amplify/env/disconnect-from-google-oauth'
+import { env } from '$amplify/env/disconnect-from-jira-oauth'
 
 const { resourceConfig, libraryOptions } = await getAmplifyDataClientConfig(env)
 
@@ -13,11 +13,11 @@ const client = generateClient<Schema>()
 /**
  * given a userId and provider, disconnect the user from the provider and remove the tokens from the database
  */
-export const handler: Schema['disconnectFromGoogleOauth']['functionHandler'] =
+export const handler: Schema['disconnectFromJiraOauth']['functionHandler'] =
 	async (event) => {
 		// get the user from the database
 		const user = await client.models.User.get({ id: event.arguments.userId })
-		const accessToken = user.data?.providers?.google?.oauth?.accessToken
+		const accessToken = user.data?.providers?.jira?.oauth?.accessToken
 
 		if (!accessToken) {
 			return { success: false, message: 'No access token found' }
@@ -52,10 +52,10 @@ export const handler: Schema['disconnectFromGoogleOauth']['functionHandler'] =
 				await client.models.User.update({
 					id: userId,
 					providers: {
-						google: null,
+						jira: null,
 					},
 				})
-				return { success: true, message: `google disconnected` }
+				return { success: true, message: `jira disconnected` }
 			} catch (error) {
 				console.error('Error updating user:', error)
 				return { success: false, message: 'Error updating user' }

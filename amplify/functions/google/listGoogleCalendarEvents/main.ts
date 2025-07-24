@@ -3,7 +3,7 @@ import { Amplify } from 'aws-amplify'
 import { generateClient } from 'aws-amplify/data'
 import { getAmplifyDataClientConfig } from '@aws-amplify/backend/function/runtime'
 import { env } from '$amplify/env/list-google-calendar-events'
-import { getValidGoogleAccessToken } from './utils'
+import { getValidGoogleAccessToken } from '../utils'
 
 const { resourceConfig, libraryOptions } = await getAmplifyDataClientConfig(env)
 
@@ -43,8 +43,27 @@ export const handler: Schema['listGoogleCalendarEvents']['functionHandler'] =
 					},
 				}
 			)
+			
+			if (!googleCalendarResponse.ok) {
+				const errorText = await googleCalendarResponse.text()
+				console.error('Google Calendar API error:', googleCalendarResponse.status, errorText)
+				return {
+					events: null,
+					error: `Google Calendar API error: ${googleCalendarResponse.status}`,
+				}
+			}
+			
 			const googleCalendarData = await googleCalendarResponse.json()
 			console.log(googleCalendarData)
+			
+			if (!googleCalendarData.items) {
+				console.error('No items in Google Calendar response:', googleCalendarData)
+				return {
+					events: null,
+					error: 'No calendar items found in response',
+				}
+			}
+			
 			const eventItems = googleCalendarData.items as {
 				id: string
 				summary: string

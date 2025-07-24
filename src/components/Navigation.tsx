@@ -1,4 +1,4 @@
-import { Calendar, Settings } from 'lucide-react'
+import { Calendar, Settings, ListTodo } from 'lucide-react'
 import { Link } from 'react-router'
 import { useAuthenticator } from '@aws-amplify/ui-react'
 
@@ -25,6 +25,11 @@ const Navigation = () => {
 							<Link to="/" className="flex items-center">
 								<Calendar className="w-4 h-4 inline mr-2" />
 								Today's Meetings
+							</Link>
+
+							<Link to="/tickets" className="flex items-center">
+								<ListTodo className="w-4 h-4 inline mr-2" />
+								Jira Tickets
 							</Link>
 
 							<Link to="/settings" className="flex items-center">

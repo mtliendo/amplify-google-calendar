@@ -10,7 +10,7 @@ export const googleOauthCallback = defineFunction({
 		GOOGLE_CLIENT_ID: process.env.GOOGLE_CLIENT_ID!,
 		GOOGLE_CLIENT_SECRET:
 			process.env.GOOGLE_CLIENT_SECRET || secret('GOOGLE_CLIENT_SECRET'),
-		REDIRECT_URI: process.env.REDIRECT_URI as string,
+		REDIRECT_URI: process.env.GOOGLE_REDIRECT_URI as string,
 		HOST_URL: process.env.HOST_URL as string,
 	},
 })

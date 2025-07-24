@@ -3,7 +3,7 @@ import { type Schema } from '../../../data/resource'
 import { Amplify } from 'aws-amplify'
 import { generateClient } from 'aws-amplify/data'
 import { getAmplifyDataClientConfig } from '@aws-amplify/backend/function/runtime'
-import { env } from '$amplify/env/google-oauth-callback'
+import { env } from '$amplify/env/jira-oauth-callback'
 import { type LambdaFunctionURLHandler } from 'aws-lambda'
 
 // 2. Configure Amplify
@@ -85,11 +85,11 @@ export const handler: LambdaFunctionURLHandler = async (
 	params.append('grant_type', 'authorization_code')
 	params.append('code', code)
 	params.append('redirect_uri', env.REDIRECT_URI)
-	params.append('client_id', env.GOOGLE_CLIENT_ID)
-	params.append('client_secret', env.GOOGLE_CLIENT_SECRET)
+	params.append('client_id', env.JIRA_CLIENT_ID)
+	params.append('client_secret', env.JIRA_CLIENT_SECRET)
 
 	// 7. Exchange the authorization code for an access token
-	const res = await fetch(env.GOOGLE_ACCESS_TOKEN_ENDPOINT, {
+	const res = await fetch(env.JIRA_ACCESS_TOKEN_ENDPOINT, {
 		method: 'POST',
 		headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
 		body: params,
@@ -110,20 +110,46 @@ export const handler: LambdaFunctionURLHandler = async (
 	// 9. If the request was successful, save the access token to the database
 	console.log('the ok data from provider', data)
 	if (data.access_token) {
-		// 9a. Update only Google provider data, preserving other providers
+		// 9a. For Jira, automatically get the cloudId from accessible resources
+		let cloudId = undefined
+		try {
+			const sitesResponse = await fetch(
+				'https://api.atlassian.com/oauth/token/accessible-resources',
+				{
+					headers: {
+						Authorization: `Bearer ${data.access_token}`,
+						Accept: 'application/json',
+					},
+				}
+			)
+
+			if (sitesResponse.ok) {
+				const sites = await sitesResponse.json()
+				// Auto-select the first site
+				if (sites.length > 0) {
+					cloudId = sites[0].id
+					console.log('Auto-selected Jira cloudId:', cloudId)
+				}
+			}
+		} catch (error) {
+			console.error('Error fetching Jira cloudId:', error)
+		}
+
+		// 9b. Update only Jira provider data, preserving other providers
 		const { data: currentUser } = await client.models.User.get({ id: userId })
 
 		await client.models.User.update({
 			id: userId,
 			providers: {
 				...currentUser?.providers,
-				google: {
+				jira: {
 					oauth: {
 						accessToken: data.access_token,
 						refreshToken: data.refresh_token,
 						scope: data.scope,
 						expiresAt: Math.floor(Date.now() / 1000) + data.expires_in,
 					},
+					...(cloudId && { cloudId }),
 				},
 			},
 		})

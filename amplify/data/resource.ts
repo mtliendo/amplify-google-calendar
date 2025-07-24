@@ -4,6 +4,10 @@ import { generateGoogleOauthAuthorizationUrl } from '../functions/google/generat
 import { disconnectFromGoogleOauth } from '../functions/google/disconnect/resource'
 import { googleOauthCallback } from '../functions/google/callback/resource'
 import { listGoogleCalendarEvents } from '../functions/google/listGoogleCalendarEvents/resource'
+import { disconnectFromJiraOauth } from '../functions/jira/disconnect/resource'
+import { jiraOauthCallback } from '../functions/jira/callback/resource'
+import { listJiraTickets } from '../functions/jira/listJiraTickets/resource'
+import { generateJiraOauthAuthorizationUrl } from '../functions/jira/generate-authorization-url/resource'
 
 const schema = a
 	.schema({
@@ -18,9 +22,12 @@ const schema = a
 			})
 			.authorization((allow) => [allow.owner()]),
 		Providers: a.customType({
-			//* The providers that the user has connected (providers are configured in the providerConfig.ts file)
 			google: a.customType({
 				oauth: a.ref('OauthBase'),
+			}),
+			jira: a.customType({
+				oauth: a.ref('OauthBase'),
+				cloudId: a.string(),
 			}),
 		}),
 		OauthBase: a.customType({
@@ -36,13 +43,33 @@ const schema = a
 			startTime: a.string(),
 			endTime: a.string(),
 		}),
-		SupportedProviders: a.enum(['google']), //* Which providers are supported
-		generateOauthAuthorizationUrl: a
+		JiraTicket: a.customType({
+			id: a.string(),
+			key: a.string(),
+			summary: a.string(),
+			description: a.string(),
+			status: a.string(),
+			assignee: a.string(),
+			reporter: a.string(),
+			created: a.string(),
+			updated: a.string(),
+			priority: a.string(),
+			issueType: a.string(),
+		}),
+		SupportedProviders: a.enum(['google', 'jira']), //* Which providers are supported
+		generateGoogleOauthAuthorizationUrl: a
 			.mutation()
 			.handler(a.handler.function(generateGoogleOauthAuthorizationUrl))
 			.arguments({
 				userId: a.string().required(),
-				provider: a.ref('SupportedProviders'),
+			})
+			.returns(a.customType({ authorizationUrl: a.url() }))
+			.authorization((allow) => [allow.authenticated()]),
+		generateJiraOauthAuthorizationUrl: a
+			.mutation()
+			.handler(a.handler.function(generateJiraOauthAuthorizationUrl))
+			.arguments({
+				userId: a.string().required(),
 			})
 			.returns(a.customType({ authorizationUrl: a.url() }))
 			.authorization((allow) => [allow.authenticated()]),
@@ -57,6 +84,14 @@ const schema = a
 		disconnectFromGoogleOauth: a
 			.mutation()
 			.handler(a.handler.function(disconnectFromGoogleOauth))
+			.arguments({
+				userId: a.string().required(),
+			})
+			.returns(a.customType({ success: a.boolean(), message: a.string() }))
+			.authorization((allow) => [allow.authenticated()]),
+		disconnectFromJiraOauth: a
+			.mutation()
+			.handler(a.handler.function(disconnectFromJiraOauth))
 			.arguments({
 				userId: a.string().required(),
 			})
@@ -79,6 +114,14 @@ const schema = a
 				})
 			)
 			.authorization((allow) => [allow.authenticated()]),
+		listJiraTickets: a
+			.query()
+			.handler(a.handler.function(listJiraTickets))
+			.arguments({
+				userIdInDb: a.string().required(),
+			})
+			.returns(a.customType({ tickets: a.ref('JiraTicket').array() }))
+			.authorization((allow) => [allow.authenticated()]),
 	})
 	.authorization((allow) => [
 		allow.resource(postConfirmation).to(['mutate']), // adds user to db
@@ -86,6 +129,10 @@ const schema = a
 		allow.resource(googleOauthCallback).to(['mutate', 'query']), // lambda furl. lists tokens from db. updates tokens in db if expired
 		allow.resource(disconnectFromGoogleOauth).to(['mutate', 'query']), // removes tokens from db
 		allow.resource(listGoogleCalendarEvents).to(['query', 'mutate']), // fetch user from db. updates tokens in db if expired
+		allow.resource(generateJiraOauthAuthorizationUrl).to(['mutate']), // creates oauth state in db
+		allow.resource(jiraOauthCallback).to(['mutate', 'query']), // lambda furl. lists tokens from db. updates tokens in db if expired
+		allow.resource(disconnectFromJiraOauth).to(['mutate', 'query']), // removes tokens from db
+		allow.resource(listJiraTickets).to(['query', 'mutate']), // fetch user from db. updates tokens in db if expired
 	])
 
 export type Schema = ClientSchema<typeof schema>
@@ -97,9 +144,3 @@ export const data = defineData({
 		defaultAuthorizationMode: 'userPool',
 	},
 })
-
-// todo: authorize from frontend
-// todo: deauthorize from frontend
-// todo: authorize from frontend
-// todo: list calendar events from frontend
-// todo: let an hour go by, list calendar events again and see if the token is refreshed

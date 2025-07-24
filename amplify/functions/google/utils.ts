@@ -1,4 +1,4 @@
-import { Schema } from '../../../data/resource'
+import { Schema } from '../../data/resource'
 import { Amplify } from 'aws-amplify'
 import { generateClient } from 'aws-amplify/data'
 import { getAmplifyDataClientConfig } from '@aws-amplify/backend/function/runtime'
@@ -48,15 +48,22 @@ export const getValidGoogleAccessToken = async (userId: string) => {
 
 	const data = await res.json()
 
+	if (!res.ok) {
+		console.error('Token refresh failed:', res.status, data)
+		return {
+			error: `Token refresh failed: ${data.error || res.statusText}`,
+		}
+	}
+
 	if (!data.access_token) {
 		return {
-			error: 'Failed to refresh token',
+			error: 'Failed to refresh token - no access token in response',
 		}
 	}
 
 	const newAccessToken = data.access_token
-	const newRefreshToken = data.refresh_token
-	const newScope = data.scope
+	const newRefreshToken = data.refresh_token || googleOauthDataFromUser.refreshToken // Keep existing if not provided
+	const newScope = data.scope || googleOauthDataFromUser.scope
 	const newExpiresAt = nowInSeconds + googleOneHourTTLInSeconds
 
 	// Update user tokens
@@ -64,7 +71,6 @@ export const getValidGoogleAccessToken = async (userId: string) => {
 		id: userId,
 		providers: {
 			google: {
-				...googleOauthDataFromUser,
 				oauth: {
 					accessToken: newAccessToken,
 					refreshToken: newRefreshToken,
